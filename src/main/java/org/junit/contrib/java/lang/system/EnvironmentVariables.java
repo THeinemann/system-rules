@@ -1,5 +1,7 @@
 package org.junit.contrib.java.lang.system;
 
+import org.junit.contrib.java.lang.system.annotation.Environment;
+import org.junit.contrib.java.lang.system.annotation.EnvironmentVariable;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -102,7 +104,25 @@ public class EnvironmentVariables implements TestRule {
 	}
 
 	public Statement apply(Statement base, Description description) {
+		setVariablesFromAnnotations(description);
+
 		return new EnvironmentVariablesStatement(base);
+	}
+
+	private void setVariablesFromAnnotations(Description description) {
+		Environment classAnnotation = description.getTestClass().getAnnotation(Environment.class);
+		handleEnvironmentAnnotation(classAnnotation);
+
+		Environment methodAnnotation = description.getAnnotation(Environment.class);
+		handleEnvironmentAnnotation(methodAnnotation);
+	}
+
+	private void handleEnvironmentAnnotation(Environment environmentAnnotation) {
+		if (environmentAnnotation != null) {
+			for (EnvironmentVariable variable : environmentAnnotation.value()) {
+				set(variable.name(), variable.value());
+			}
+		}
 	}
 
 	private class EnvironmentVariablesStatement extends Statement {

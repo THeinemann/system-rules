@@ -4,6 +4,8 @@ package org.junit.contrib.java.lang.system;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.contrib.java.lang.system.annotation.Environment;
+import org.junit.contrib.java.lang.system.annotation.EnvironmentVariable;
 import org.junit.experimental.runners.Enclosed;
 import org.junit.runner.RunWith;
 import org.junit.runner.notification.Failure;
@@ -374,6 +376,179 @@ public class EnvironmentVariablesTest {
 				assertThat(getenv())
 					.doesNotContainKey("dummy name")
 					.doesNotContainKey("another name");
+			}
+		}
+	}
+
+	@RunWith(Enclosed.class)
+	public static class modification_by_annotation {
+		@RunWith(AcceptanceTestRunner.class)
+		public static class after_a_successful_test_environment_variables_map_contains_same_values_as_before {
+			private static Map<String, String> originalEnvironmentVariables;
+
+			@BeforeClass
+			public static void captureEnviromentVariables() {
+				originalEnvironmentVariables = new HashMap<String, String>(getenv());
+			}
+
+			public static class TestClass {
+				@Rule
+				public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+					.set("dummy name", randomValue());
+
+				@Test
+				public void test() {
+				}
+			}
+
+			public static void verifyStateAfterTest() {
+				assertThat(getenv()).isEqualTo(originalEnvironmentVariables);
+			}
+		}
+
+		@RunWith(AcceptanceTestRunner.class)
+		public static class after_a_successful_test_environment_variables_are_the_same_as_before {
+			private static String originalValue;
+
+
+			@BeforeClass
+			public static void captureValue() {
+				originalValue = getenv("dummy name");
+			}
+
+			public static class TestClass {
+				@Rule
+				public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+					.set("dummy name", randomValue());
+
+				@Test
+				public void test() {
+				}
+			}
+
+			public static void verifyStateAfterTest() {
+				assertThat(getenv("dummy name")).isEqualTo(originalValue);
+			}
+		}
+
+		@RunWith(AcceptanceTestRunner.class)
+		public static class after_a_test_that_throws_an_exception_environment_variables_map_contains_same_values_as_before {
+			private static Map<String, String> originalEnvironmentVariables;
+
+			@BeforeClass
+			public static void captureEnviromentVariables() {
+				originalEnvironmentVariables = new HashMap<String, String>(getenv());
+			}
+
+			public static class TestClass {
+				@Rule
+				public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+					.set("dummy name", randomValue());
+
+				@Test
+				public void test() {
+					throw new RuntimeException("dummy exception");
+				}
+			}
+
+			public static void expectFailure(Failure failure) {
+				assertThat(getenv()).isEqualTo(originalEnvironmentVariables);
+			}
+		}
+
+		@RunWith(AcceptanceTestRunner.class)
+		public static class after_a_test_that_throws_an_exception_environment_variables_are_the_same_as_before {
+			private static String originalValue;
+
+			@BeforeClass
+			public static void captureValue() {
+				originalValue = getenv("dummy name");
+			}
+
+			public static class TestClass {
+				@Rule
+				public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+					.set("dummy name", randomValue());
+
+				@Test
+				public void test() {
+					throw new RuntimeException("dummy exception");
+				}
+			}
+
+			public static void expectFailure(Failure failure) {
+				assertThat(getenv("dummy name")).isEqualTo(originalValue);
+			}
+		}
+
+		@Environment(
+			@EnvironmentVariable(name = "dummy name", value = "dummy value")
+		)
+		public static class environment_variable_that_is_set_by_class_annotation_is_available_in_the_test {
+			@Rule
+			public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+
+			@Test
+			public void test() {
+				assertThat(getenv("dummy name")).isEqualTo("dummy value");
+			}
+		}
+
+		@Environment(
+			@EnvironmentVariable(name = "dummy name", value = "dummy value")
+		)
+		public static class environment_variable_that_is_set_by_class_annotation_is_available_from_environment_variables_map {
+			@Rule
+			public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+				.set("dummy name", "dummy value");
+
+			@Test
+			public void test() {
+				assertThat(getenv()).containsEntry("dummy name", "dummy value");
+			}
+		}
+
+		public static class environment_variable_that_is_set_by_method_annotation_is_available_in_the_test {
+			@Rule
+			public final EnvironmentVariables environmentVariables = new EnvironmentVariables();
+
+			@Test
+			@Environment(
+				@EnvironmentVariable(name = "dummy name", value = "dummy value")
+			)
+			public void test() {
+				assertThat(getenv("dummy name")).isEqualTo("dummy value");
+			}
+		}
+
+		public static class environment_variable_that_is_set_by_method_annotation_is_available_from_environment_variables_map {
+			@Rule
+			public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+				.set("dummy name", "dummy value");
+
+			@Test
+			@Environment(
+				@EnvironmentVariable(name = "dummy name", value = "dummy value")
+			)
+			public void test() {
+				assertThat(getenv()).containsEntry("dummy name", "dummy value");
+			}
+		}
+
+		@Environment(
+			@EnvironmentVariable(name = "dummy name", value = "not the expected dummy value")
+		)
+		public static class method_annotation_overrides_class_annotation {
+			@Rule
+			public final EnvironmentVariables environmentVariables = new EnvironmentVariables()
+				.set("dummy name", "dummy value");
+
+			@Test
+			@Environment(
+				@EnvironmentVariable(name = "dummy name", value = "dummy value")
+			)
+			public void test() {
+				assertThat(getenv("dummy name")).isEqualTo("dummy value");
 			}
 		}
 	}
